@@ -12,14 +12,6 @@ services:
     command: sleep infinity
     networks:
       - dev_network
-  ganache:
-    build:
-      context: .
-      dockerfile: Dockerfile.ganache
-    ports:
-      - 8545:8545
-    networks:
-      - dev_network
 networks:
   dev_network:
     name: bgmc_dev_network
