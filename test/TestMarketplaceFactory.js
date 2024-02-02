@@ -14,4 +14,15 @@ contract("MarketplaceFactory", (accounts) => {
         assert.equal(await marketplace.name(), name);
         assert.equal(await marketplace.imageSrc(), imageSrc);
     });
+    it ("should find the marketplace address by name", async () => {
+        const marketplaceFactory = await MarketplaceFactory.deployed();
+        const name = "My Marketplace 2";
+        const imageSrc = "https://example.com/image.jpg";
+    
+        const receipt = await marketplaceFactory.createMarketplace(name, imageSrc, { from: accounts[1], value: undefined });
+        const marketplaceAddress = receipt.logs[0].args[1];
+        const marketplaces = await marketplaceFactory.getMarketplacesByName("my marketplace 2");
+        
+        assert.equal(marketplaces[0], marketplaceAddress);
+    });
 });
