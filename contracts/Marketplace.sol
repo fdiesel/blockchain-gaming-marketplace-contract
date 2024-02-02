@@ -3,40 +3,71 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "../libraries/StringUtils.sol";
 
+// TODO: add PaymentSplitter for marketplace owner
 contract Marketplace is Ownable {
     mapping(uint => Item) public items;
     uint private itemCount;
     string public name;
     string public imageSrc;
-    bool public isOpen; //private?
-    
+    bool public isOpen;
+
     struct Item {
-        uint id; // id required?
+        uint id;
         address payable seller;
         address soldTo;
         string name;
         string imageSrc;
+        string description;
         uint price;
-        bool sold;
-        // description?
     }
 
-    // EVENTS!!!!
-    // transfer ownership of marketplace possible??
-
     modifier itemAvailable(uint id_) {
-        require(items[id_].id != 0 && !items[id_].sold, "Item not available.");
+        require(
+            items[id_].id != 0 &&
+                items[id_].seller != address(0) &&
+                items[id_].soldTo == address(0),
+            "Item not available."
+        );
         _;
     }
 
-    constructor(string memory name_, string memory imageSrc_) Ownable(_msgSender()) {
+    modifier marketplaceOpen() {
+        require(isOpen, "Marketplace is closed.");
+        _;
+    }
+
+    event ItemAdded(uint indexed id, address indexed seller);
+
+    event ItemUpdated(uint indexed id, address indexed seller);
+
+    event ItemPurchased(
+        uint indexed id,
+        address indexed seller,
+        address indexed buyer,
+        uint price
+    );
+
+    event ItemRemoved(uint indexed id);
+
+    event MarketplaceClosed(address indexed owner, address indexed marketplace);
+
+    constructor(
+        string memory name_,
+        string memory imageSrc_
+    ) Ownable(_msgSender()) {
         name = name_;
         imageSrc = imageSrc_;
         isOpen = true;
     }
 
-    function addItem(string memory name_, string memory imageSrc_, uint price_) public onlyOwner {
+    function addItem(
+        string memory name_,
+        string memory imageSrc_,
+        string memory description_,
+        uint price_
+    ) public onlyOwner {
         itemCount++;
         items[itemCount] = Item(
             itemCount,
@@ -44,36 +75,53 @@ contract Marketplace is Ownable {
             address(0),
             name_,
             imageSrc_,
-            price_,
-            false
+            description_,
+            price_
         );
+        emit ItemAdded(itemCount, _msgSender());
     }
 
     // TODO: request purchase!
-    function purchaseItem(uint id_) public payable itemAvailable(id_) {
+    // TODO: price calculation
+    function purchaseItem(
+        uint id_
+    ) public payable marketplaceOpen itemAvailable(id_) {
         Item storage item = items[id_];
         require(msg.value >= item.price, "Not enough Ether provided.");
         Address.sendValue(item.seller, msg.value);
-        item.sold = true;
         item.soldTo = _msgSender();
+        emit ItemPurchased(id_, item.seller, _msgSender(), item.price);
     }
 
-    function removeItem(uint id_) public onlyOwner itemAvailable(id_) {
+    function removeItem(
+        uint id_
+    ) public marketplaceOpen onlyOwner itemAvailable(id_) {
         delete items[id_];
+        emit ItemRemoved(id_);
     }
 
-    function updateItem(uint id_, string memory name_, string memory imageSrc_,uint price_) public onlyOwner itemAvailable(id_) {
+    function updateItem(
+        uint id_,
+        string memory name_,
+        string memory imageSrc_,
+        string memory description_,
+        uint price_
+    ) public marketplaceOpen onlyOwner itemAvailable(id_) {
         Item storage item = items[id_];
         item.name = name_;
         item.imageSrc = imageSrc_;
+        item.description = description_;
         item.price = price_;
+        emit ItemUpdated(id_, address(item.seller));
     }
 
     function getAllItems() public view returns (Item[] memory) {
         Item[] memory _items = new Item[](itemCount);
-        for (uint i = 1; i <= itemCount;) {
+        for (uint i = 1; i <= itemCount; ) {
             _items[i - 1] = items[i];
-            unchecked { i++; }
+            unchecked {
+                i++;
+            }
         }
         return _items;
     }
@@ -82,47 +130,45 @@ contract Marketplace is Ownable {
         return items[id_];
     }
 
-    // not case-insensitive
-    function getItemByName(string memory name_) public view returns (Item memory) {
-        for (uint i = 1; i <= itemCount; i++) {
-            if (keccak256(abi.encodePacked(items[i].name)) == keccak256(abi.encodePacked(name_))) {
-                return items[i];
+    function getItemsByName(
+        string memory name_
+    ) public view returns (Item[] memory) {
+        string memory lowerName = StringUtils.toLowerCase(name_);
+        Item[] memory matchingItems = new Item[](itemCount);
+        uint matchingItemCount = 0;
+
+        for (uint i = 1; i <= itemCount; ) {
+            string memory lowerItemName = StringUtils.toLowerCase(items[i].name);
+            if (StringUtils.isEqual(lowerItemName, lowerName)) {
+                matchingItems[matchingItemCount] = items[i];
+                unchecked {
+                    matchingItemCount++;
+                }
+            }
+            unchecked {
+                i++;
             }
         }
-        revert("Item not found.");
+        return matchingItems;
     }
-    // helper function for case-insensitive search
-    function toLowerCase(string memory str) internal pure returns (string memory) {
-    bytes memory bStr = bytes(str);
-    bytes memory bLower = new bytes(bStr.length);
-    for (uint i = 0; i < bStr.length; i++) {
-        // Uppercase character ASCII range 65 to 90
-        if ((uint8(bStr[i]) >= 65) && (uint8(bStr[i]) <= 90)) {
-            // Convert to lowercase by adding 32 to ASCII value
-            bLower[i] = bytes1(uint8(bStr[i]) + 32);
-        } else {
-            bLower[i] = bStr[i];
-        }
-    }
-    return string(bLower);
-}
 
-    // TODO: check if market is open on all functions
     function close() public onlyOwner {
-        // required when MarketplaceRegistry.sol is implemented???
         require(
             allItemsSold(),
             "Not all items in this marketplace have been sold."
         );
         isOpen = false;
+        emit MarketplaceClosed(_msgSender(), address(this));
     }
 
     function allItemsSold() internal view returns (bool) {
-        for (uint i = 1; i <= itemCount;) {
-            if (!items[i].sold) {
+        for (uint i = 1; i <= itemCount; ) {
+            if (items[i].soldTo == address(0)) {
                 return false;
             }
-            unchecked { i++; }
+            unchecked {
+                i++;
+            }
         }
         return true;
     }
