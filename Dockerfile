@@ -8,6 +8,7 @@ FROM baseimage as build
 WORKDIR /contract
 COPY . .
 RUN npm ci
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8545
 ENTRYPOINT [ "./entrypoint.sh" ]
