@@ -6,6 +6,7 @@ import "../libraries/StringUtils.sol";
 
 contract MarketplaceFactory {
     address[] public marketplaces;
+    mapping(address => address[]) public marketplaceToOwner;
 
     event MarketplaceCreated(
         address indexed owner,
@@ -16,14 +17,21 @@ contract MarketplaceFactory {
         string memory name_,
         string memory imageSrc_
     ) public returns (address) {
-        Marketplace marketplace = new Marketplace(name_, imageSrc_);
+        Marketplace marketplace = new Marketplace(msg.sender, name_, imageSrc_);
         marketplaces.push(address(marketplace));
+        marketplaceToOwner[msg.sender].push(address(marketplace));
         emit MarketplaceCreated(msg.sender, address(marketplace));
         return address(marketplace);
     }
 
     function getMarketplaces() public view returns (address[] memory) {
         return marketplaces;
+    }
+
+    function getMarketplaceByOwner(
+        address owner
+    ) public view returns (address[] memory) {
+        return marketplaceToOwner[owner];
     }
 
     function getMarketplaceByAddress(

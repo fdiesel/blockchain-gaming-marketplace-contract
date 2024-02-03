@@ -54,9 +54,10 @@ contract Marketplace is Ownable {
     event MarketplaceClosed(address indexed owner, address indexed marketplace);
 
     constructor(
+        address owner_,
         string memory name_,
         string memory imageSrc_
-    ) Ownable(_msgSender()) {
+    ) Ownable(owner_) {
         name = name_;
         imageSrc = imageSrc_;
         isOpen = true;

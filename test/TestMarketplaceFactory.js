@@ -11,6 +11,7 @@ contract("MarketplaceFactory", (accounts) => {
         const marketplaceAddress = receipt.logs[0].args[1];
         const marketplace = await Marketplace.at(marketplaceAddress);
         
+        assert.equal(await marketplace.owner(), accounts[1]);
         assert.equal(await marketplace.name(), name);
         assert.equal(await marketplace.imageSrc(), imageSrc);
     });

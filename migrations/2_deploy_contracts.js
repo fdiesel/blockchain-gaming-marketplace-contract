@@ -6,5 +6,5 @@ module.exports = function(deployer, network, accounts) {
   
   const name = "My Marketplace";
   const imageSrc = "https://example.com/image.jpg";
-  deployer.deploy(Marketplace, name, imageSrc);
+  deployer.deploy(Marketplace, accounts[0], name, imageSrc);
 };
