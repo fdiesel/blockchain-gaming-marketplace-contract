@@ -153,6 +153,63 @@ contract Marketplace is Ownable {
         return matchingItems;
     }
 
+    function getItemsBySeller(
+        address seller_
+    ) public view returns (Item[] memory) {
+        Item[] memory sellerItems = new Item[](itemCount);
+        uint sellerItemCount = 0;
+        for (uint i = 1; i <= itemCount; ) {
+            if (items[i].seller == seller_) {
+                sellerItems[sellerItemCount] = items[i];
+                unchecked {
+                    sellerItemCount++;
+                }
+            }
+            unchecked {
+                i++;
+            }
+        }
+        return sellerItems;
+    }
+
+    function getItemsByBuyer(
+        address buyer_
+    ) public view returns (Item[] memory) {
+        Item[] memory buyerItems = new Item[](itemCount);
+        uint buyerItemCount = 0;
+
+        for (uint i = 1; i <= itemCount; ) {
+            if (items[i].soldTo == buyer_) {
+                buyerItems[buyerItemCount] = items[i];
+                unchecked {
+                    buyerItemCount++;
+                }
+            }
+            unchecked {
+                i++;
+            }
+        }
+        return buyerItems;
+    }
+
+    function getUnsoldItems() public view returns (Item[] memory) {
+        Item[] memory unsoldItems = new Item[](itemCount);
+        uint unsoldItemCount = 0;
+
+        for (uint i = 1; i <= itemCount; ) {
+            if (items[i].soldTo == address(0)) {
+                unsoldItems[unsoldItemCount] = items[i];
+                unchecked {
+                    unsoldItemCount++;
+                }
+            }
+            unchecked {
+                i++;
+            }
+        }
+        return unsoldItems;
+    }
+
     function close() public onlyOwner {
         require(
             allItemsSold(),

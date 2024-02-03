@@ -27,10 +27,11 @@ contract("Marketplace", (accounts) => {
         const price = 10;
 
         await marketplace.addItem(name, imageSrc, description, price);
-        await marketplace.purchaseItem(2, { from: accounts[1], value: price });
+        await marketplace.purchaseItem(2, { from: accounts[2], value: price });
         const product = await marketplace.getItemById(2);
 
-        assert.equal(product[2], accounts[1]);
+        assert.equal(product[1], accounts[0])
+        assert.equal(product[2], accounts[2]);
     });
     it("should not buy a product with insufficient funds", async () => {
         const marketplace = await Marketplace.deployed();
@@ -114,5 +115,12 @@ contract("Marketplace", (accounts) => {
         const product = await marketplace.getItemsByName(name);
 
         assert.equal(product[0][0], 5);
+    });
+    it ("should find the items by seller", async () => {
+        const marketplace = await Marketplace.deployed();
+        const seller = accounts[0];
+        const product = await marketplace.getItemsBySeller(seller);
+
+        assert.equal(product[0][1], accounts[0]);
     });
 });
