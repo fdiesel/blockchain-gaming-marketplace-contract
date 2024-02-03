@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "./Marketplace.sol";
 import "../libraries/StringUtils.sol";
 
+// TODO: all Marketplaces where a user bought something
 contract MarketplaceFactory {
     address[] public marketplaces;
     mapping(address => address[]) public marketplaceToOwner;
@@ -12,6 +13,29 @@ contract MarketplaceFactory {
         address indexed owner,
         address indexed marketplaceAddress
     );
+
+    function getMarketplacesWithBoughtItems(address buyer_)
+        public
+        view
+        returns (address[] memory)
+    {
+        uint marketplaceCount = marketplaces.length;
+        address[] memory matchingMarketplaces = new address[](marketplaceCount);
+        uint matchingItemCount = 0;
+        for (uint i = 0; i < marketplaceCount; ) {
+            Marketplace marketplace = getMarketplaceByAddress(marketplaces[i]);
+            if (marketplace.getItemsByBuyer(buyer_).length > 0) {
+                matchingMarketplaces[matchingItemCount] = marketplaces[i];
+                unchecked {
+                    matchingItemCount++;
+                }
+            }
+            unchecked {
+                i++;
+            }
+        }
+        return matchingMarketplaces;
+    }
 
     function createMarketplace(
         string memory name_,
