@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "../libraries/StringUtils.sol";
 
-// TODO: add PaymentSplitter for marketplace owner
-contract Marketplace is Ownable {
+contract Marketplace is AccessControlEnumerable {
+    bytes32 public constant AUTHORISED_ROLE = keccak256("AUTHORISED_ROLE");
+
     mapping(uint => Item) public items;
     uint private itemCount;
     string public name;
@@ -21,6 +21,15 @@ contract Marketplace is Ownable {
         string imageSrc;
         string description;
         uint price;
+    }
+
+    modifier sufficientRole(address address_) {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, address_) ||
+                hasRole(AUTHORISED_ROLE, address_),
+            "Insufficient role"
+        );
+        _;
     }
 
     modifier itemAvailable(uint id_) {
@@ -56,11 +65,37 @@ contract Marketplace is Ownable {
     constructor(
         address owner_,
         string memory name_,
-        string memory imageSrc_
-    ) Ownable(owner_) {
+        string memory imageSrc_,
+        address[] memory authorisedAddresses_
+    ) {
         name = name_;
         imageSrc = imageSrc_;
+        _setupRole(DEFAULT_ADMIN_ROLE, owner_);
+        //grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        addAuthorisedAddresses(authorisedAddresses_);
         isOpen = true;
+    }
+
+    function addAuthorisedAddresses(
+        address[] memory authorisedAddresses_
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint i = 0; i < authorisedAddresses_.length; ) {
+            grantRole(AUTHORISED_ROLE, authorisedAddresses_[i]);
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    function removeAuthorisedAddresses(
+        address[] memory authorisedAddresses_
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint i = 0; i < authorisedAddresses_.length; ) {
+            revokeRole(AUTHORISED_ROLE, authorisedAddresses_[i]);
+            unchecked {
+                i++;
+            }
+        }
     }
 
     function addItem(
@@ -68,7 +103,7 @@ contract Marketplace is Ownable {
         string memory imageSrc_,
         string memory description_,
         uint price_
-    ) public onlyOwner {
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) marketplaceOpen {
         itemCount++;
         items[itemCount] = Item(
             itemCount,
@@ -77,26 +112,34 @@ contract Marketplace is Ownable {
             name_,
             imageSrc_,
             description_,
-            price_
+            price_ * 1 wei
         );
         emit ItemAdded(itemCount, _msgSender());
     }
 
-    // TODO: request purchase!
-    // TODO: price calculation
     function purchaseItem(
         uint id_
-    ) public payable marketplaceOpen itemAvailable(id_) {
-        Item storage item = items[id_];
-        require(msg.value >= item.price, "Not enough Ether provided.");
-        Address.sendValue(item.seller, msg.value);
-        item.soldTo = _msgSender();
-        emit ItemPurchased(id_, item.seller, _msgSender(), item.price);
+    )
+        public
+        payable
+        sufficientRole(_msgSender())
+        marketplaceOpen
+        itemAvailable(id_)
+    {
+        require(msg.value >= items[id_].price, "Not enough Ether provided.");
+        Address.sendValue(items[id_].seller, msg.value);
+        items[id_].soldTo = _msgSender();
+        emit ItemPurchased(
+            id_,
+            items[id_].seller,
+            _msgSender(),
+            items[id_].price
+        );
     }
 
     function removeItem(
         uint id_
-    ) public marketplaceOpen onlyOwner itemAvailable(id_) {
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) marketplaceOpen itemAvailable(id_) {
         delete items[id_];
         emit ItemRemoved(id_);
     }
@@ -107,7 +150,7 @@ contract Marketplace is Ownable {
         string memory imageSrc_,
         string memory description_,
         uint price_
-    ) public marketplaceOpen onlyOwner itemAvailable(id_) {
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) marketplaceOpen itemAvailable(id_) {
         Item storage item = items[id_];
         item.name = name_;
         item.imageSrc = imageSrc_;
@@ -131,86 +174,26 @@ contract Marketplace is Ownable {
         return items[id_];
     }
 
-    function getItemsByName(
-        string memory name_
-    ) public view returns (Item[] memory) {
-        string memory lowerName = StringUtils.toLowerCase(name_);
-        Item[] memory matchingItems = new Item[](itemCount);
-        uint matchingItemCount = 0;
-
-        for (uint i = 1; i <= itemCount; ) {
-            string memory lowerItemName = StringUtils.toLowerCase(items[i].name);
-            if (StringUtils.isEqual(lowerItemName, lowerName)) {
-                matchingItems[matchingItemCount] = items[i];
-                unchecked {
-                    matchingItemCount++;
-                }
-            }
-            unchecked {
-                i++;
-            }
-        }
-        return matchingItems;
-    }
-
-    function getItemsBySeller(
-        address seller_
-    ) public view returns (Item[] memory) {
-        Item[] memory sellerItems = new Item[](itemCount);
-        uint sellerItemCount = 0;
-        for (uint i = 1; i <= itemCount; ) {
-            if (items[i].seller == seller_) {
-                sellerItems[sellerItemCount] = items[i];
-                unchecked {
-                    sellerItemCount++;
-                }
-            }
-            unchecked {
-                i++;
-            }
-        }
-        return sellerItems;
-    }
-
     function getItemsByBuyer(
         address buyer_
     ) public view returns (Item[] memory) {
-        Item[] memory buyerItems = new Item[](itemCount);
-        uint buyerItemCount = 0;
-
+        Item[] memory filteredItems = new Item[](itemCount);
+        uint filteredItemCount = 0;
         for (uint i = 1; i <= itemCount; ) {
             if (items[i].soldTo == buyer_) {
-                buyerItems[buyerItemCount] = items[i];
+                filteredItems[filteredItemCount] = items[i];
                 unchecked {
-                    buyerItemCount++;
+                    filteredItemCount++;
                 }
             }
             unchecked {
                 i++;
             }
         }
-        return buyerItems;
+        return filteredItems;
     }
 
-    function getUnsoldItems() public view returns (Item[] memory) {
-        Item[] memory unsoldItems = new Item[](itemCount);
-        uint unsoldItemCount = 0;
-
-        for (uint i = 1; i <= itemCount; ) {
-            if (items[i].soldTo == address(0)) {
-                unsoldItems[unsoldItemCount] = items[i];
-                unchecked {
-                    unsoldItemCount++;
-                }
-            }
-            unchecked {
-                i++;
-            }
-        }
-        return unsoldItems;
-    }
-
-    function close() public onlyOwner {
+    function close() public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(
             allItemsSold(),
             "Not all items in this marketplace have been sold."
@@ -229,5 +212,13 @@ contract Marketplace is Ownable {
             }
         }
         return true;
+    }
+
+    function getOwner() public view returns (address) {
+        return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
+    }
+
+    function _setupRole(bytes32 role, address account) internal {
+        _grantRole(role, account);
     }
 }

@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "./Marketplace.sol";
 import "../libraries/StringUtils.sol";
 
-// TODO: all Marketplaces where a user bought something
 contract MarketplaceFactory {
     address[] public marketplaces;
     mapping(address => address[]) public marketplaceToOwner;
@@ -39,31 +38,21 @@ contract MarketplaceFactory {
 
     function createMarketplace(
         string memory name_,
-        string memory imageSrc_
-    ) public returns (address) {
-        Marketplace marketplace = new Marketplace(msg.sender, name_, imageSrc_);
+        string memory imageSrc_,
+        address[] memory authorisedAddresses
+    ) public {
+        Marketplace marketplace = new Marketplace(msg.sender, name_, imageSrc_, authorisedAddresses);
         marketplaces.push(address(marketplace));
         marketplaceToOwner[msg.sender].push(address(marketplace));
         emit MarketplaceCreated(msg.sender, address(marketplace));
-        return address(marketplace);
     }
 
-    function getMarketplaces() public view returns (address[] memory) {
-        return marketplaces;
-    }
-
-    function getMarketplaceByOwner(
-        address owner
-    ) public view returns (address[] memory) {
-        return marketplaceToOwner[owner];
-    }
+    
 
     function getMarketplaceByAddress(
         address marketplaceAddress
     ) public view returns (Marketplace) {
-        if (Marketplace(marketplaceAddress).owner() == address(0)) {
-            revert("Marketplace does not exist");
-        }
+        require(Marketplace(marketplaceAddress).getOwner() == address(0), "Marketplace does not exist");
         return Marketplace(marketplaceAddress);
     }
 
@@ -93,14 +82,5 @@ contract MarketplaceFactory {
             }
         }
         return matchingMarketplaces;
-    }
-
-    function closeMarketplace(address marketplaceAddress) public {
-        Marketplace marketplace = Marketplace(marketplaceAddress);
-        require(
-            msg.sender == marketplace.owner(),
-            "Only the owner can close the marketplace"
-        );
-        marketplace.close();
     }
 }

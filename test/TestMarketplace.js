@@ -9,7 +9,7 @@ contract("Marketplace", (accounts) => {
         const description = "My Product Description";
         const price = 10;
 
-        await marketplace.addItem(name, imageSrc, description, price);
+        await marketplace.addItem(name, imageSrc, description, price, { from: "0x164436e2c3F1Bc10A16DC7E82E8AE0fb5a272839" });
         const product = await marketplace.getItemById(1);
 
         assert.equal(product[0], 1);
@@ -26,12 +26,12 @@ contract("Marketplace", (accounts) => {
         const description = "My Product Description";
         const price = 10;
 
-        await marketplace.addItem(name, imageSrc, description, price);
-        await marketplace.purchaseItem(2, { from: accounts[2], value: price });
+        await marketplace.addItem(name, imageSrc, description, price, { from: "0x164436e2c3F1Bc10A16DC7E82E8AE0fb5a272839" });
+        await marketplace.purchaseItem(2, { from: "0xb167bEa37801509192Aff696bD6AB57EB434ef7d", value: price });
         const product = await marketplace.getItemById(2);
 
-        assert.equal(product[1], accounts[0])
-        assert.equal(product[2], accounts[2]);
+        assert.equal(product[1], "0x164436e2c3F1Bc10A16DC7E82E8AE0fb5a272839")
+        assert.equal(product[2], "0xb167bEa37801509192Aff696bD6AB57EB434ef7d");
     });
     it("should not buy a product with insufficient funds", async () => {
         const marketplace = await Marketplace.deployed();
@@ -108,19 +108,5 @@ contract("Marketplace", (accounts) => {
         const products = await marketplace.getAllItems();
 
         assert.equal(products.length, 5);
-    });
-    it ("should find the item by name", async () => {
-        const marketplace = await Marketplace.deployed();
-        const name = "my new product 5";
-        const product = await marketplace.getItemsByName(name);
-
-        assert.equal(product[0][0], 5);
-    });
-    it ("should find the items by seller", async () => {
-        const marketplace = await Marketplace.deployed();
-        const seller = accounts[0];
-        const product = await marketplace.getItemsBySeller(seller);
-
-        assert.equal(product[0][1], accounts[0]);
     });
 });
