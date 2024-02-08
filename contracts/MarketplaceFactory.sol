@@ -61,6 +61,10 @@ contract MarketplaceFactory {
         return marketplaceToOwner[owner];
     }
 
+    function getMarketplaces() public view returns (address[] memory) {
+        return marketplaces;
+    }
+
     function getMarketplacesByName(
         string memory name_
     ) public view returns (address[] memory) {
