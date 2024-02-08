@@ -96,8 +96,4 @@ contract MarketplaceFactory {
     receive() external payable {
         emit Received(msg.sender, msg.value);
     }
-
-    fallback() external payable {
-        revert("MarketplaceFactory cannot receive Ether with data");
-    }
 }

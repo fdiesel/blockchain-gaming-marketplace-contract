@@ -26,4 +26,13 @@ contract("MarketplaceFactory", (accounts) => {
         
         assert.equal(marketplaces[0], marketplaceAddress);
     });
+    it ("should call the fallback function", async () => {
+        let marketplaceFactory = await MarketplaceFactory.deployed();
+        let error = false;
+        try {
+            await marketplaceFactory.sendTransaction({ from: accounts[0], value: 1 });
+        } catch (e) {
+            error = true;
+        }
+    });
 });
