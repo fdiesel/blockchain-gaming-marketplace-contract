@@ -161,10 +161,10 @@ contract Marketplace is AccessControlEnumerable {
         uint price_
     ) public onlyRole(DEFAULT_ADMIN_ROLE) marketplaceOpen itemAvailable(id_) {
         Item storage item = items[id_];
-        item.name = name_;
-        item.imageSrc = imageSrc_;
-        item.description = description_;
-        item.price = price_;
+        item.name = bytes(name_).length == 0 ? item.name : name_;
+        item.imageSrc = bytes(imageSrc_).length == 0 ? item.imageSrc : imageSrc_;
+        item.description = bytes(description_).length == 0 ? item.description : description_;
+        item.price = price_ == 0 ? item.price : price_ * 1 wei;
         emit ItemUpdated(id_, address(item.seller));
     }
 

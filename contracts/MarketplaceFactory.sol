@@ -13,6 +13,8 @@ contract MarketplaceFactory {
         address indexed marketplaceAddress
     );
 
+    event Received(address sender, uint amount);
+
     function getMarketplacesWithBoughtItems(address buyer_)
         public
         view
@@ -53,6 +55,12 @@ contract MarketplaceFactory {
         return Marketplace(marketplaceAddress);
     }
 
+    function getMarketplaceByOwner(
+        address owner
+    ) public view returns (address[] memory) {
+        return marketplaceToOwner[owner];
+    }
+
     function getMarketplacesByName(
         string memory name_
     ) public view returns (address[] memory) {
@@ -79,5 +87,13 @@ contract MarketplaceFactory {
             }
         }
         return matchingMarketplaces;
+    }
+
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
+
+    fallback() external payable {
+        revert("MarketplaceFactory cannot receive Ether with data");
     }
 }
