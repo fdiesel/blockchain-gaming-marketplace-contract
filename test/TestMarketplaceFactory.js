@@ -15,7 +15,6 @@ contract("MarketplaceFactory", (accounts) => {
         assert.equal(await marketplace.name(), name);
         assert.equal(await marketplace.imageSrc(), imageSrc);
     });
-    // TODO: fix this test
     it ("should find the marketplace address by name", async () => {
         const marketplaceFactory = await MarketplaceFactory.deployed();
         const name = "My Marketplace 2";
@@ -24,8 +23,7 @@ contract("MarketplaceFactory", (accounts) => {
         const receipt = await marketplaceFactory.createMarketplace(name, imageSrc, { from: accounts[4], value: undefined });
         const marketplaceAddress = receipt.logs[0].args[1];
         const marketplaces = await marketplaceFactory.getMarketplacesByName("my marketplace 2");
-        assert.equal(marketplaces[0], 1);
         
-        //assert.equal(marketplaces[0], marketplaceAddress);
+        assert.equal(marketplaces[0], marketplaceAddress);
     });
 });

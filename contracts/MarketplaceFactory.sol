@@ -51,11 +51,11 @@ contract MarketplaceFactory {
     function getMarketplaceByAddress(
         address marketplaceAddress
     ) public view returns (Marketplace) {
-        require(Marketplace(marketplaceAddress).getOwner() == address(0), "Marketplace does not exist");
+        require(Marketplace(marketplaceAddress).getOwner() != address(0), "Marketplace does not exist");
         return Marketplace(marketplaceAddress);
     }
 
-    function getMarketplaceByOwner(
+    function getMarketplacesByOwner(
         address owner
     ) public view returns (address[] memory) {
         return marketplaceToOwner[owner];
