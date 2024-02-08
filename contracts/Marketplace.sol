@@ -62,17 +62,24 @@ contract Marketplace is AccessControlEnumerable {
 
     event MarketplaceClosed(address indexed owner, address indexed marketplace);
 
+    event AddressesAuthorised(
+        address indexed authoriser,
+        address[] indexed authorisedAddresses
+    );
+
+    event AddressesDeauthorised(
+        address indexed deauthoriser,
+        address[] indexed deauthorisedAddresses
+    );
+
     constructor(
         address owner_,
         string memory name_,
-        string memory imageSrc_,
-        address[] memory authorisedAddresses_
+        string memory imageSrc_
     ) {
         name = name_;
         imageSrc = imageSrc_;
         _setupRole(DEFAULT_ADMIN_ROLE, owner_);
-        //grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        addAuthorisedAddresses(authorisedAddresses_);
         isOpen = true;
     }
 
@@ -85,6 +92,7 @@ contract Marketplace is AccessControlEnumerable {
                 i++;
             }
         }
+        emit AddressesAuthorised(_msgSender(), authorisedAddresses_);
     }
 
     function removeAuthorisedAddresses(
@@ -96,6 +104,7 @@ contract Marketplace is AccessControlEnumerable {
                 i++;
             }
         }
+        emit AddressesDeauthorised(_msgSender(), authorisedAddresses_);
     }
 
     function addItem(

@@ -38,16 +38,13 @@ contract MarketplaceFactory {
 
     function createMarketplace(
         string memory name_,
-        string memory imageSrc_,
-        address[] memory authorisedAddresses
+        string memory imageSrc_
     ) public {
-        Marketplace marketplace = new Marketplace(msg.sender, name_, imageSrc_, authorisedAddresses);
+        Marketplace marketplace = new Marketplace(msg.sender, name_, imageSrc_);
         marketplaces.push(address(marketplace));
         marketplaceToOwner[msg.sender].push(address(marketplace));
         emit MarketplaceCreated(msg.sender, address(marketplace));
     }
-
-    
 
     function getMarketplaceByAddress(
         address marketplaceAddress
